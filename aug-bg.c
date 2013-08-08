@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include "aug_plugin.h"
+#include "aug_api.h"
 
 const char aug_plugin_name[] = "aug-bg";
 
@@ -33,15 +34,39 @@ void cell_update(
 	attr_t *attr, int *color_pair, aug_action *action, void *user
 );
 
-const struct aug_api *g_api;
-struct aug_plugin *g_plugin;
+AUG_GLOBAL_API_OBJECTS;
 
-struct aug_plugin_cb g_callbacks = {
-	.input_char = NULL,
-	.cell_update = cell_update,
-	.cursor_move = NULL,
-	.screen_dims_change = NULL
-};
+struct aug_plugin_cb g_callbacks;
+
+int column_min(int cols) {
+	return cols-1-g_boo_w*2;
+}
+
+int row_min() {
+	return 1;
+}
+
+int row_max() {
+	return (g_boo_h+1);
+}
+
+void post_scroll(int rows, int cols, int direction, aug_action *action, void *user) {
+	int rmax, cmin;
+
+	(void)(direction);
+	(void)(user);
+	(void)(action);
+	
+	rmax = row_max();
+	if(rmax > rows)
+		rmax = rows;
+
+	cmin = column_min(cols);
+
+	/* assumes scroll of n upward */
+	if(rmax >= 0 && cmin > 10)
+		aug_primary_term_damage(cmin, cols-1, 0, rmax);
+}
 
 void cell_update(int rows, int cols, int *row, int *col, wchar_t *wch, 
 		attr_t *attr, int *color_pair, aug_action *action, void *user) {
@@ -52,11 +77,12 @@ void cell_update(int rows, int cols, int *row, int *col, wchar_t *wch,
 	(void)(action);
 	(void)(user);
 	
-	/*(*g_api->log)(g_plugin, "%d/%d, %d/%d\n", *col, cols, *row, rows);*/
-	col_min = cols-1-g_boo_w*2;
+	/*aug_log("%d/%d, %d/%d\n", *col, cols, *row, rows);*/
+	col_min = column_min(cols);
 	row_min = 1;
-	if(*col >= col_min && *col < (cols-1)
-			&& *row >= row_min && *row < (g_boo_h+1)) {
+	if(col_min > 10 
+			&& *col >= col_min && *col < (cols-1)
+			&& *row >= row_min && *row < row_max() ) {
 		r = *row - 1;
 		c = *col - col_min;
 		if(g_boo_map[r][c/2] != 0) {
@@ -66,13 +92,15 @@ void cell_update(int rows, int cols, int *row, int *col, wchar_t *wch,
 }
 
 int aug_plugin_init(struct aug_plugin *plugin, const struct aug_api *api) {
-	g_plugin = plugin;	
-	g_api = api;
+	AUG_API_INIT(plugin, api);
 
-	(*g_api->log)(g_plugin, "init\n");
+	aug_log("init\n");
 
+	aug_callbacks_init(&g_callbacks);
+	g_callbacks.cell_update = cell_update;
+	g_callbacks.post_scroll = post_scroll;
 	g_callbacks.user = NULL;
-	(*g_api->callbacks)(g_plugin, &g_callbacks, NULL);
+	aug_callbacks(&g_callbacks, NULL);
 
 	return 0;
 }
