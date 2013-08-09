@@ -58,12 +58,17 @@ void post_scroll(int rows, int cols, int direction, aug_action *action, void *us
 	(void)(action);
 	
 	rmax = row_max();
+	if(direction == 0)
+		return;
+	else if(direction < 0)
+		rmax += -direction;
+	/* else it got scrolled off top edge */
+
 	if(rmax > rows)
 		rmax = rows;
 
 	cmin = column_min(cols);
 
-	/* assumes scroll of n upward */
 	if(rmax >= 0 && cmin > 10)
 		aug_primary_term_damage(cmin, cols-1, 0, rmax);
 }
