@@ -16,9 +16,7 @@
  * along with aug-bg.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <stdint.h>
-
 #include "aug_plugin.h"
-#include "aug_api.h"
 
 const char aug_plugin_name[] = "aug-bg";
 
@@ -50,13 +48,6 @@ static uint32_t g_cmd_ch = 0x62; /* b */
 static int g_on = 1;
 static int g_rows = 0;
 static int g_cols = 0;
-
-void cell_update(
-	int rows, int cols, int *row, int *col, wchar_t *wch, 
-	attr_t *attr, int *color_pair, aug_action *action, void *user
-);
-
-AUG_GLOBAL_API_OBJECTS;
 
 struct aug_plugin_cb g_callbacks;
 
@@ -158,10 +149,8 @@ void primary_term_dims_change(int rows, int cols, void *user) {
 	g_cols = cols;
 }
 
-int aug_plugin_init(struct aug_plugin *plugin, const struct aug_api *api) {
-	AUG_API_INIT(plugin, api);
-
-	aug_log("init\n");
+int aug_plugin_start() {
+	aug_log("start\n");
 
 	aug_callbacks_init(&g_callbacks);
 	g_callbacks.cell_update = cell_update;
@@ -180,4 +169,3 @@ int aug_plugin_init(struct aug_plugin *plugin, const struct aug_api *api) {
 void aug_plugin_free() {
 	aug_key_unbind(g_cmd_ch);
 }
-
